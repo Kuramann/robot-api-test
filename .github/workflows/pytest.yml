@@ -1,0 +1,48 @@
+name: Run Pytest Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      flask:
+        image: python:3.11
+        ports:
+          - 5000:5000
+        options: --health-cmd "curl http://localhost:5000/status || exit 1" --health-interval 10s --health-timeout 5s --health-retries 3
+        env:
+          FLASK_APP: app.main
+          FLASK_ENV: development
+        volumes:
+          - ./:/usr/src/app
+        command: >
+          sh -c "pip install -r requirements.txt &&
+                 cd app &&
+                 python main.py"
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Wait for Flask to start
+      run: sleep 10
+
+    - name: Run tests
+      env:
+        BASE_URL: http://localhost:5000
+      run: |
+        pytest tests --base-url=$BASE_URL
